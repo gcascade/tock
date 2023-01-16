@@ -24,6 +24,7 @@ import ai.tock.bot.connector.whatsapp.UserHashedIdCache
 import ai.tock.bot.connector.whatsapp.whatsAppConnectorType
 import ai.tock.bot.engine.ConnectorController
 import ai.tock.bot.engine.action.Action
+import ai.tock.bot.engine.action.SendChoice
 import ai.tock.bot.engine.action.SendSentence
 import ai.tock.bot.engine.event.Event
 import ai.tock.bot.engine.user.PlayerId
@@ -79,18 +80,23 @@ class AlcmeonConnector(
 
             val senderId = UserHashedIdCache.createHashedId(message.userExternalId)
 
-            val event = SendSentence(
-                PlayerId(senderId),
-                connectorId,
-                PlayerId(connectorId, PlayerType.bot),
-                when (message) {
-                    is AlcmeonConnectorWhatsappMessageIn -> message.event.text.body
-                    is AlcmeonConnectorFacebookMessageIn -> message.event.message.text
-                    else -> {
-                        null
+            val event : Event = when(message) {
+                is AlcmeonConnectorWhatsappMessageIn -> {
+                    when(message.event) {
+                        is AlcmeonConnectorWhatsappMessageInteractiveEvent ->
+                            SendChoice.decodeChoice(
+                                message.event.interactive.payload,
+                                PlayerId(senderId),
+                                connectorId,
+                                PlayerId(connectorId, PlayerType.bot)
+                            )
+                        is AlcmeonConnectorWhatsappMessageTextEvent -> sendSentence(senderId, message.event.text.body)
+                        else -> sendSentence(senderId, null)
                     }
                 }
-            )
+                is AlcmeonConnectorFacebookMessageIn -> sendSentence(senderId, message.event.message.text)
+                else -> sendSentence(senderId, null)
+            }
 
             executor.executeBlocking {
                 controller.handle(
@@ -104,8 +110,6 @@ class AlcmeonConnector(
                     )
                 )
             }
-
-
         } catch (e: Throwable) {
             logger.error { e }
         }
@@ -123,5 +127,12 @@ class AlcmeonConnector(
             callback.sendResponseWithExit(event.exitReason, event.delayInMs)
         }
     }
+
+    private fun sendSentence(from: String, text: String?) = SendSentence(
+        PlayerId((from)),
+        connectorId,
+        PlayerId(connectorId, PlayerType.bot),
+        text
+    )
 
 }

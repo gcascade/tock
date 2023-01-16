@@ -16,6 +16,8 @@
 
 package ai.tock.bot.connector.whatsapp.model.send
 
+import com.fasterxml.jackson.annotation.JsonProperty
+
 /**
  *
  */
@@ -63,8 +65,10 @@ data class WhatsAppBotAction(
     val button: String? = null,
     val buttons: List<WhatsAppBotActionButton>? = null,
     val sections: List<WhatsAppBotActionSection>? = null,
-    val catalog_id: String? = null,
-    val product_retailer_id: String? = null,
+    @JsonProperty("catalog_id")
+    val catalogId: String? = null,
+    @JsonProperty("product_retailer_id")
+    val productRetailerId: String? = null,
 )
 
 data class WhatsAppBotActionButton(
@@ -80,15 +84,17 @@ data class WhatsAppBotActionButtonReply(
 data class WhatsAppBotActionSection(
     val title: String? = null,
     val rows: List<WhatsAppBotRow>? = null,
-    val product_items: List<WhatsAppBotActionSectionProduct>? = null,
+    @JsonProperty("product_items")
+    val productItems: List<WhatsAppBotActionSectionProduct>? = null,
 )
 
 data class WhatsAppBotRow(
-    val id: String? = null,
-    val title: String? = null,
+    val id: String,
+    val title: String,
     val description: String? = null,
 )
 
 data class WhatsAppBotActionSectionProduct(
-    val product_retailer_id: String,
+    @JsonProperty("product_retailer_id")
+    val productRetailerId: String,
 )

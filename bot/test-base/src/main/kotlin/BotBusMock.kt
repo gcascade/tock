@@ -37,6 +37,7 @@ import ai.tock.bot.engine.dialog.EntityValue
 import ai.tock.bot.engine.dialog.NextUserActionState
 import ai.tock.bot.engine.dialog.Snapshot
 import ai.tock.bot.engine.dialog.Story
+import ai.tock.bot.engine.event.Event
 import ai.tock.bot.engine.user.UserPreferences
 import ai.tock.bot.engine.user.UserTimeline
 import ai.tock.nlp.api.client.model.Entity
@@ -429,6 +430,14 @@ open class BotBusMock(
 
     override fun markAsUnknown() {
         // do nothing
+    }
+
+    override fun isCompatibleWith(connectorType: ConnectorType): Boolean {
+        return context.connectorType == connectorType
+    }
+
+    override fun send(event: Event, delayInMs: Long): BotBus {
+        return this
     }
 
     /**
