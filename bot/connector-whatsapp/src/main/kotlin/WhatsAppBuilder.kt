@@ -38,6 +38,7 @@ import ai.tock.bot.connector.whatsapp.model.webhook.WhatsAppComponent
 import ai.tock.bot.connector.whatsapp.model.webhook.WhatsAppLanguage
 import ai.tock.bot.connector.whatsapp.model.webhook.WhatsAppTemplate
 import ai.tock.bot.definition.IntentAware
+import ai.tock.bot.definition.Parameters
 import ai.tock.bot.definition.StoryHandlerDefinition
 import ai.tock.bot.definition.StoryStep
 import ai.tock.bot.engine.BotBus
@@ -49,6 +50,14 @@ import mu.KotlinLogging
 private val logger = KotlinLogging.logger {}
 
 internal const val WHATS_APP_CONNECTOR_TYPE_ID = "whatsapp"
+private const val WHATS_APP_BUTTONS_TITLE_MAX_LENGTH = 20
+private const val WHATS_APP_BUTTONS_ID_MAX_LENGTH = 256
+private const val WHATS_APP_SECTION_TITLE_MAX_LENGTH = 24
+private const val WHATS_APP_ROW_TITLE_MAX_LENGTH = 24
+private const val WHATS_APP_ROW_ID_MAX_LENGTH = 200
+private const val WHATS_APP_ROW_DESCRIPTION_MAX_LENGTH = 72
+private const val WHATS_APP_MAX_ROWS = 10
+private const val WHATS_APP_MAX_SECTIONS = 10
 
 /**
  * The WhatsApp connector type.
@@ -160,8 +169,8 @@ fun I18nTranslator.replyButtonMessage(
             buttons = replies.map {
                 WhatsAppBotActionButton(
                     reply = WhatsAppBotActionButtonReply(
-                        id = it.payload.take(256),
-                        title = translate(it.title).toString().takeWithEllipsis(20),
+                        id = it.payload.checkLength(WHATS_APP_BUTTONS_ID_MAX_LENGTH),
+                        title = translate(it.title).toString().checkLength(WHATS_APP_BUTTONS_TITLE_MAX_LENGTH),
                     )
                 )
             }
@@ -169,13 +178,13 @@ fun I18nTranslator.replyButtonMessage(
     )
 )
 
-fun I18nTranslator.listMessage(
+fun I18nTranslator.completeListMessage(
     text: CharSequence,
     button: CharSequence,
     vararg sections: WhatsAppBotActionSection
-) : WhatsAppBotMessageInteractiveMessage = listMessage(text, button, sections.toList())
+) : WhatsAppBotMessageInteractiveMessage = completeListMessage(text, button, sections.toList())
 
-fun I18nTranslator.listMessage(
+fun I18nTranslator.completeListMessage(
     text: CharSequence,
     button: CharSequence,
     sections: List<WhatsAppBotActionSection>,
@@ -185,15 +194,15 @@ fun I18nTranslator.listMessage(
         type = WhatsAppBotInteractiveType.list,
         body = WhatsAppBotBody(translate(text).toString()),
         action = WhatsAppBotAction(
-            button = translate(button).toString().takeWithEllipsis(20),
+            button = translate(button).toString().checkLength(WHATS_APP_BUTTONS_TITLE_MAX_LENGTH),
             sections = sections.map {
                 WhatsAppBotActionSection(
-                    title = translate(it.title).toString().takeWithEllipsis(24),
+                    title = translate(it.title).toString().checkLength(WHATS_APP_SECTION_TITLE_MAX_LENGTH),
                     rows = it.rows?.map { row ->
                         WhatsAppBotRow(
-                            id = row.id.take(200),
-                            title = translate(row.title).toString().takeWithEllipsis(24),
-                            description = translate(row.description).toString().takeWithEllipsis(72)
+                            id = row.id.checkLength(WHATS_APP_ROW_ID_MAX_LENGTH),
+                            title = translate(row.title).toString().checkLength(WHATS_APP_ROW_TITLE_MAX_LENGTH),
+                            description = translate(row.description).toString().checkLength(WHATS_APP_ROW_DESCRIPTION_MAX_LENGTH)
                         )
                     }
                 )
@@ -201,14 +210,14 @@ fun I18nTranslator.listMessage(
         )
     )
 ).also {
-    if ((it.interactive.action?.sections?.flatMap { s -> s.rows ?: listOf() }?.count() ?: 0) > 10) {
-        logger.warn { "a list message is limited to 10 rows across all sections." }
+    if ((it.interactive.action?.sections?.flatMap { s -> s.rows ?: listOf() }?.count() ?: 0) > WHATS_APP_MAX_ROWS) {
+        error("a list message is limited to $WHATS_APP_MAX_ROWS rows across all sections.")
     }
-    if ((it.interactive.action?.sections?.count() ?: 0) > 10) {
-        logger.warn { "sections count in list message should not exceed 10 chars." }
+    if ((it.interactive.action?.sections?.count() ?: 0) > WHATS_APP_MAX_SECTIONS) {
+        error("sections count in list message should not exceed $WHATS_APP_MAX_SECTIONS.")
     }
-    if ((it.interactive.action?.button?.count() ?: 0) > 20) {
-        logger.warn { "button text ${it.interactive.action?.button} should not exceed 20 chars." }
+    if ((it.interactive.action?.button?.count() ?: 0) > WHATS_APP_BUTTONS_TITLE_MAX_LENGTH) {
+        error("button text ${it.interactive.action?.button} should not exceed $WHATS_APP_BUTTONS_TITLE_MAX_LENGTH chars.")
     }
 }
 
@@ -217,7 +226,14 @@ fun I18nTranslator.listMessage(
     button: CharSequence,
     vararg replies: QuickReply
 ) : WhatsAppBotMessageInteractiveMessage =
-    listMessage(
+        listMessage(text, button, replies.toList())
+
+fun I18nTranslator.listMessage(
+    text: CharSequence,
+    button: CharSequence,
+    replies: List<QuickReply>
+) : WhatsAppBotMessageInteractiveMessage =
+    completeListMessage(
         text, button, WhatsAppBotActionSection(rows = replies.map {
             WhatsAppBotRow(
                 id = it.payload,
@@ -226,44 +242,6 @@ fun I18nTranslator.listMessage(
             )
         })
     )
-
-fun I18nTranslator.productMessage(
-    text: CharSequence,
-    catalogId: CharSequence,
-    productRetailerId: CharSequence,
-) : WhatsAppBotMessageInteractiveMessage = WhatsAppBotMessageInteractiveMessage(
-    recipientType = WhatsAppBotRecipientType.individual,
-    interactive = WhatsAppBotInteractive(
-        type = WhatsAppBotInteractiveType.product,
-        body = WhatsAppBotBody(translate(text).toString()),
-        action = WhatsAppBotAction(
-            catalogId = catalogId.toString(),
-            productRetailerId = productRetailerId.toString(),
-        )
-    )
-)
-
-fun I18nTranslator.productListMessage(
-    text: CharSequence,
-    catalogId: CharSequence,
-    vararg sections : WhatsAppBotActionSection
-) : WhatsAppBotMessageInteractiveMessage = productListMessage(text, catalogId, sections.toList())
-
-fun I18nTranslator.productListMessage(
-    text: CharSequence,
-    catalogId: CharSequence,
-    sections : List<WhatsAppBotActionSection>
-) : WhatsAppBotMessageInteractiveMessage = WhatsAppBotMessageInteractiveMessage(
-    recipientType = WhatsAppBotRecipientType.individual,
-    interactive = WhatsAppBotInteractive(
-        type = WhatsAppBotInteractiveType.product_list,
-        body = WhatsAppBotBody(translate(text).toString()),
-        action = WhatsAppBotAction(
-            catalogId = catalogId.toString(),
-            sections = sections
-        )
-    )
-)
 
 fun I18nTranslator.nlpQuickReply(
     title: CharSequence,
@@ -279,19 +257,27 @@ fun <T: Bus<T>> T.quickReply(
     title: CharSequence,
     subTitle: CharSequence? = null,
     targetIntent: IntentAware,
+    parameters: Parameters
+): QuickReply =
+    quickReply(title, subTitle, targetIntent, stepName, parameters.toMap())
+
+fun <T: Bus<T>> T.quickReply(
+    title: CharSequence,
+    subTitle: CharSequence? = null,
+    targetIntent: IntentAware,
     step: StoryStep<out StoryHandlerDefinition>? = null,
     vararg parameters: Pair<String, String>
 ) : QuickReply = quickReply(title, subTitle, targetIntent.wrappedIntent(), step?.name, parameters.toMap())
 
-private fun <T: Bus<T>> T.quickReply(
+fun <T: Bus<T>> T.quickReply(
     title: CharSequence,
     subTitle: CharSequence? = null,
     targetIntent: IntentAware,
     step: String? = null,
-    parameters: Map<String, String>
+    parameters: Map<String, String> = mapOf()
 ) : QuickReply =
     quickReply(title, subTitle, targetIntent, step, parameters) { intent, s, params ->
-        SendChoice.encodeChoiceId(this, intent, s, params)
+        SendChoice.encodeChoiceId(intent, s, params, null, null, sourceAppId = null)
     }
 
 private fun I18nTranslator.quickReply(
@@ -323,10 +309,9 @@ private fun buildTemplate(
     )
 }
 
-private fun String.takeWithEllipsis(maxLength: Int) : String {
-    if (maxLength > 3 && this.length > maxLength) {
-        logger.warn { "text $this should not exceed $maxLength chars." }
-        return this.substring(0, maxLength - 3) + "..."
+private fun String.checkLength(maxLength: Int) : String {
+    if (maxLength > 0 && this.length > maxLength) {
+        error("text $this should not exceed $maxLength chars.")
     }
     return this
 }

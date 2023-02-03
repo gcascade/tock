@@ -326,7 +326,7 @@ open class BotBusMock(
         action.metadata.replyMessage = mockData.replyMessage
         if (action is SendSentence) {
             action.messages.addAll(mockData.connectorMessages.values)
-            if (action.text == null && !action.hasMessage(connectorType)) {
+            if (action.text == null && !action.hasMessage(connectorType) && !action.hasMessage(context.connectorsCompatibleWith.toList())) {
                 error("Error: No message specified when calling send() or end()")
             }
         }
@@ -444,14 +444,6 @@ open class BotBusMock(
 
     override fun markAsUnknown() {
         // do nothing
-    }
-
-    override fun isCompatibleWith(connectorType: ConnectorType): Boolean {
-        return context.connectorType == connectorType
-    }
-
-    override fun send(event: Event, delayInMs: Long): BotBus {
-        return this
     }
 
     /**

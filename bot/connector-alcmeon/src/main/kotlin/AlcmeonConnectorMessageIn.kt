@@ -65,10 +65,10 @@ data class AlcmeonConnectorWhatsappMessageIn(
     JsonSubTypes.Type(value = AlcmeonConnectorWhatsappMessageTextEvent::class, name = "text"),
     JsonSubTypes.Type(value = AlcmeonConnectorWhatsappMessageInteractiveEvent::class, name = "interactive"),
 )
-abstract class AlcmeonConnectorWhatsappMessageEvent(val type: AlcmeonConnectorWhatsappMessageEventType?)
+abstract class AlcmeonConnectorWhatsappMessageEvent(val type: AlcmeonConnectorWhatsappMessageEventType? = null)
 
 enum class AlcmeonConnectorWhatsappMessageEventType {
-    text, interactive, unknown
+    text, interactive
 }
 
 data class AlcmeonConnectorWhatsappMessageTextEvent(val text: WhatsAppTextBody) : AlcmeonConnectorWhatsappMessageEvent(
@@ -79,9 +79,7 @@ data class AlcmeonConnectorWhatsappMessageInteractiveEvent(val interactive: What
     AlcmeonConnectorWhatsappMessageEventType.interactive
 )
 
-class AlcmeonConnectorWhatsappMessageDefaultEvent : AlcmeonConnectorWhatsappMessageEvent(
-    AlcmeonConnectorWhatsappMessageEventType.unknown
-)
+class AlcmeonConnectorWhatsappMessageDefaultEvent : AlcmeonConnectorWhatsappMessageEvent()
 
 data class AlcmeonConnectorFacebookMessageIn(
     override val userExternalId: String,

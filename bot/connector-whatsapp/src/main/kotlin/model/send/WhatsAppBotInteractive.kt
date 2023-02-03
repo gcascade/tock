@@ -16,6 +16,8 @@
 
 package ai.tock.bot.connector.whatsapp.model.send
 
+import ai.tock.bot.engine.action.SendChoice
+import ai.tock.bot.engine.message.Choice
 import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
@@ -28,7 +30,7 @@ enum class WhatsAppBotInteractiveType {
 data class WhatsAppBotInteractive(
     var type: WhatsAppBotInteractiveType,
     val header: WhatsAppBotInteractiveHeader? = null,
-    val body: WhatsAppBotBody? = null,
+    val body: WhatsAppBotBody? = null, // optional for product type
     val footer: WhatsAppBotFooter? = null,
     val action: WhatsAppBotAction? = null,
 )
@@ -74,7 +76,17 @@ data class WhatsAppBotAction(
 data class WhatsAppBotActionButton(
     val type: String = "reply",
     val reply: WhatsAppBotActionButtonReply,
-)
+) {
+    fun toChoice(): Choice {
+        return SendChoice.decodeChoiceId(reply.id)
+            .let { (intent, params) ->
+                Choice(
+                    intent,
+                    params + (SendChoice.TITLE_PARAMETER to reply.title)
+                )
+            }
+    }
+}
 
 data class WhatsAppBotActionButtonReply(
     val title: String,
@@ -92,7 +104,16 @@ data class WhatsAppBotRow(
     val id: String,
     val title: String,
     val description: String? = null,
-)
+) {
+    fun toChoice() : Choice =
+        SendChoice.decodeChoiceId(id)
+            .let { (intent, params) ->
+                Choice(
+                    intent,
+                    params + (SendChoice.TITLE_PARAMETER to title)
+                )
+            }
+}
 
 data class WhatsAppBotActionSectionProduct(
     @JsonProperty("product_retailer_id")

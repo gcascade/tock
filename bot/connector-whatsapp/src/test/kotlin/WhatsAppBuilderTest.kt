@@ -32,26 +32,27 @@ import io.mockk.mockk
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 
 class WhatsAppBuilderTest {
 
     val bus: BotBus = mockk(relaxed = true)
     val longText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. " +
-            "Curabitur vitae augue dignissim, ultrices tortor sed, fringilla neque. Maecenas sit amet efficitur enim. " +
-            "Pellentesque nec dictum tellus. Etiam rhoncus arcu nunc, eget sagittis lacus rutrum ac. Aenean eu ipsum " +
-            "lorem. Vestibulum condimentum, ligula in euismod auctor, felis ante semper erat, ut laoreet est libero " +
-            "ut tellus. Duis sollicitudin justo id est lobortis sollicitudin. Fusce gravida sagittis nibh id tempor. " +
-            "Proin a imperdiet est. In arcu est, imperdiet quis pellentesque vitae, tincidunt sit amet massa. Nunc " +
-            "laoreet orci eu fringilla auctor. Aliquam interdum odio vel metus."
+        "Curabitur vitae augue dignissim, ultrices tortor sed, fringilla neque. Maecenas sit amet efficitur enim. " +
+        "Pellentesque nec dictum tellus. Etiam rhoncus arcu nunc, eget sagittis lacus rutrum ac. Aenean eu ipsum " +
+        "lorem. Vestibulum condimentum, ligula in euismod auctor, felis ante semper erat, ut laoreet est libero " +
+        "ut tellus. Duis sollicitudin justo id est lobortis sollicitudin. Fusce gravida sagittis nibh id tempor. " +
+        "Proin a imperdiet est. In arcu est, imperdiet quis pellentesque vitae, tincidunt sit amet massa. Nunc " +
+        "laoreet orci eu fringilla auctor. Aliquam interdum odio vel metus."
 
     @BeforeEach
     fun before() {
         tockInternalInjector = KodeinInjector().apply {
             inject(
-                    Kodein {
-                        import(sharedTestModule)
-                    }
+                Kodein {
+                    import(sharedTestModule)
+                }
             )
         }
 
@@ -80,17 +81,16 @@ class WhatsAppBuilderTest {
         assertEquals("title1", result.interactive.action?.buttons?.get(0)?.reply?.title)
         assertEquals("?_nlp=title1", result.interactive.action?.buttons?.get(0)?.reply?.id)
         assertEquals("title2", result.interactive.action?.buttons?.get(1)?.reply?.title)
-        assertEquals("intent?_step=&_previous_intent=&_source=appId", result.interactive.action?.buttons?.get(1)?.reply?.id)
+        assertEquals("intent", result.interactive.action?.buttons?.get(1)?.reply?.id)
     }
 
     @Test
     fun `create a reply button message with long texts`() {
-        val quickReply = bus.nlpQuickReply(longText)
+        assertThrows<IllegalStateException> {
+            val quickReply = bus.nlpQuickReply(longText)
 
-        val result = bus.replyButtonMessage("text", quickReply)
-
-        assertEquals(longText.substring(0, 17) + "...", result.interactive.action?.buttons?.get(0)?.reply?.title)
-        assertEquals("${quickReply.payload.substring(0, 253)}...", result.interactive.action?.buttons?.get(0)?.reply?.id)
+            bus.replyButtonMessage("text", quickReply)
+        }
     }
 
     @Test
@@ -106,20 +106,15 @@ class WhatsAppBuilderTest {
         assertEquals("?_nlp=title1", result.interactive.action?.sections?.get(0)?.rows?.get(0)?.id)
         assertEquals("title2", result.interactive.action?.sections?.get(0)?.rows?.get(1)?.title)
         assertEquals("subtitle", result.interactive.action?.sections?.get(0)?.rows?.get(1)?.description)
-        assertEquals("intent?_step=&_previous_intent=&_source=appId", result.interactive.action?.sections?.get(0)?.rows?.get(1)?.id)
+        assertEquals("intent", result.interactive.action?.sections?.get(0)?.rows?.get(1)?.id)
     }
 
     @Test
     fun `create a list message with too long texts`() {
-        val quickReply = bus.quickReply(longText, longText, Intent(longText))
+        assertThrows<IllegalStateException> {
+            val quickReply = bus.quickReply(longText, longText, Intent(longText))
 
-        val result = bus.listMessage("text", longText, quickReply)
-
-        assertEquals("${longText.substring(0, 17)}...", result.interactive.action?.button)
-        assertEquals("${quickReply.title.substring(0, 21)}...", result.interactive.action?.sections?.get(0)?.rows?.get(0)?.title)
-        assertEquals("${quickReply.payload.substring(0, 197)}...", result.interactive.action?.sections?.get(0)?.rows?.get(0)?.id)
-        assertEquals("${quickReply.subTitle?.substring(0, 69)}...", result.interactive.action?.sections?.get(0)?.rows?.get(0)?.description)
-
-
+            bus.listMessage("text", longText, quickReply)
+        }
     }
 }

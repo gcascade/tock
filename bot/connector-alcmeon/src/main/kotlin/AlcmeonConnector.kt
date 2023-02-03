@@ -80,7 +80,7 @@ class AlcmeonConnector(
 
             val senderId = UserHashedIdCache.createHashedId(message.userExternalId)
 
-            val event : Event = when(message) {
+            val event = when(message) {
                 is AlcmeonConnectorWhatsappMessageIn -> {
                     when(message.event) {
                         is AlcmeonConnectorWhatsappMessageInteractiveEvent ->
